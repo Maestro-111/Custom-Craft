@@ -7,7 +7,10 @@ MIT License
 import sys
 import os
 import time
+import shutil
 import argparse
+
+import pytesseract
 
 import torch
 import torch.nn as nn
@@ -26,8 +29,23 @@ import json
 import zipfile
 
 from craft import CRAFT
+from merge_conts import run
 
 from collections import OrderedDict
+
+
+def delete_files_in_directory(directory_path):
+    files = os.listdir(directory_path)
+    for file_name in files:
+        file_path = os.path.join(directory_path, file_name)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+    print("All files deleted successfully.")
+
+
+
+
 def copyStateDict(state_dict):
     if list(state_dict.keys())[0].startswith("module"):
         start_idx = 1
@@ -44,17 +62,19 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description='CRAFT Text Detection')
 parser.add_argument('--trained_model', default='weights/craft_mlt_25k.pth', type=str, help='pretrained model')
-parser.add_argument('--text_threshold', default=0.7, type=float, help='text confidence threshold')
-parser.add_argument('--low_text', default=0.4, type=float, help='text low-bound score')
-parser.add_argument('--link_threshold', default=0.4, type=float, help='link confidence threshold')
-parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda for inference')
+parser.add_argument('--text_threshold', default=0.4, type=float, help='text confidence threshold')
+parser.add_argument('--low_text', default=0.1, type=float, help='text low-bound score')
+parser.add_argument('--link_threshold', default=0.5, type=float, help='link confidence threshold')
+parser.add_argument('--cuda', default=False, type=str2bool, help='Use cuda for inference')
 parser.add_argument('--canvas_size', default=1280, type=int, help='image size for inference')
-parser.add_argument('--mag_ratio', default=1.5, type=float, help='image magnification ratio')
+parser.add_argument('--mag_ratio', default=2, type=float, help='image magnification ratio') # 1.5
 parser.add_argument('--poly', default=False, action='store_true', help='enable polygon type')
 parser.add_argument('--show_time', default=False, action='store_true', help='show processing time')
 parser.add_argument('--test_folder', default='/data/', type=str, help='folder path to input images')
 parser.add_argument('--refine', default=False, action='store_true', help='enable link refiner')
 parser.add_argument('--refiner_model', default='weights/craft_refiner_CTW1500.pth', type=str, help='pretrained refiner model')
+parser.add_argument('--custom_prep', default=False, help='do custom prep')
+parser.add_argument('--tesseract_mode', default=3, type=int, help='mode for tessedact')
 
 args = parser.parse_args()
 
@@ -168,4 +188,34 @@ if __name__ == '__main__':
 
         file_utils.saveResult(image_path, image[:,:,::-1], polys, dirname=result_folder)
 
+
+    #############
+
+    if args.custom_prep:
+        res_dir = 'result'
+        copy_dir = 'tets_boxes_from_craft/coords'
+
+        for file in os.listdir(res_dir):
+            if '.txt' in file:
+                shutil.copy(os.path.join(res_dir, file), copy_dir)
+
+        img_dir = 'test'
+        copy_dir = 'tets_boxes_from_craft/imgs'
+
+
+        for file in os.listdir(img_dir):
+            shutil.copy(os.path.join(img_dir, file), copy_dir)
+
+
+        run('tets_boxes_from_craft',tes_mode=args.tesseract_mode)
+
+
+
+        delete_files_in_directory('result')
+        delete_files_in_directory('tets_boxes_from_craft/coords')
+        delete_files_in_directory('tets_boxes_from_craft/imgs')
+
     print("elapsed time : {}s".format(time.time() - t))
+
+
+# image -> Craft -> original boxes -> merging on original boxes -> apply processing stuff onto the merged boxes -> give the box to tesseract

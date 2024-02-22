@@ -4,3 +4,5 @@
 *.pth
 result*
 weights*
+test*
+tets_boxes_from_craft*
