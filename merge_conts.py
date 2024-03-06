@@ -299,26 +299,54 @@ def distance_between_contours(contour1, contour2):
                 min_dist = dist
     return min_dist
 
+def merge_rectangles(rect1, rect2): # rect1 = x1,y1,x2,y2,x3,y3,x4,y4
+
+    if not rect1:
+        return rect2
+
+    x1_min = min(rect1[0], rect2[0])
+    y1_min = min(rect1[1], rect2[1])
+    x1_max = max(rect1[4], rect2[4])
+    y1_max = max(rect1[5], rect2[5])
+
+    w,h = x1_max-x1_min,y1_max-y1_min
+
+    return [x1_min, y1_min,x1_min+w,y1_min,x1_max, y1_max,x1_min,y1_min+h]
+
 def merge_close_contours(contours, threshold):
+
     merged_contours = []
     merged_indices = set()
 
     for i, contour1 in enumerate(contours):
+
         if i in merged_indices:
             continue
+
+        x1, y1, w, h = cv2.boundingRect(contour1)
+        x2, y2 = x1 + w, y1
+        x3, y3 = x1 + w, y1 + h
+        x4, y4 = x1, y1 + h
+
+
+        current = [x1,y1,x2,y2,x3,y3,x4,y4]
+
         for j, contour2 in enumerate(contours):
-            if i != j and j not in merged_indices:
+
+            if i != j:
                 dist = distance_between_contours(contour1, contour2)
                 if dist < threshold:
-                    # Merge contours
-                    merged_contour = np.concatenate((contour1, contour2))
-                    merged_contours.append(merged_contour)
-                    merged_indices.add(i)
+                    dx1, dy1, dw, dh = cv2.boundingRect(contour2)
+                    dx2, dy2 = dx1 + dw, dy1
+                    dx3, dy3 = dx1 + dw, dy1 + dh
+                    dx4, dy4 = dx1, dy1 + dh
+
+                    current = merge_rectangles(current, [dx1, dy1, dx2, dy2, dx3, dy3, dx4, dy4])
                     merged_indices.add(j)
-                    break
-        if i not in merged_indices:
-            # If no contour was close enough to merge, add the contour as is
-            merged_contours.append(contour1)
+
+        current = np.array(current, dtype=np.int32).reshape((-1, 1, 2))
+        merged_contours.append(current)
+
 
     return merged_contours
 
@@ -414,6 +442,10 @@ def save_cnts(folder,img,img_path,cnts,count=0):
         count += 1
 
 
+
+
+
+
 def merge_intersecting_rectangles(rectangles, n_iterations):
 
     def intersects(rect1, rect2): # rect2 inters rect1
@@ -431,37 +463,24 @@ def merge_intersecting_rectangles(rectangles, n_iterations):
 
         return False
 
-    def merge_rectangles(rect1, rect2): # rect1 = x1,y1,x2,y2,x3,y3,x4,y4
-
-        if not rect1:
-            return rect2
-
-        #print(rect1,rect2)
-
-        x1_min = min(rect1[0], rect2[0])
-        y1_min = min(rect1[1], rect2[1])
-        x1_max = max(rect1[4], rect2[4])
-        y1_max = max(rect1[5], rect2[5])
-
-        w,h = x1_max-x1_min,y1_max-y1_min
-
-        return [x1_min, y1_min,x1_min+w,y1_min,x1_max, y1_max,x1_min,y1_min+h]
-
     merged_rectangles = rectangles
 
     for _ in range(n_iterations):
-        merged = False
         processed_indices = set()
         current_merged = []
         for i, rect1 in enumerate(merged_rectangles):
             if i in processed_indices:
                 continue
             merged_rect = [rect1]
-            for j, rect2 in enumerate(merged_rectangles[i + 1:]):
+            for j, rect2 in enumerate(merged_rectangles):
+
+                if i == j:
+                    continue
+
+
                 if intersects(rect1, rect2):
                     merged_rect.append(rect2)
                     processed_indices.add(j)
-                    merged = True
 
             figure = []
 
@@ -506,22 +525,30 @@ def merge_existing_boxes(path,points):
     copy1 = img.copy()
     copy2 = img.copy()
     copy3 = img.copy()
+    copy4 = img.copy()
 
     merged_rectangles = merge_intersecting_rectangles(points, 5) # lst of points
     merged_rectangles = custom_cnt(merged_rectangles) # convert to cnts
 
+    vis_cnts(copy1,merged_rectangles)
 
-    merged_rectangles = merge_close_contours(merged_rectangles,30)
+    merged_rectangles = merge_close_contours(merged_rectangles,100)
     merged_rectangles = remove_contours_inside(merged_rectangles)
 
+    vis_cnts(copy2, merged_rectangles)
 
-    merged_rectangles = merge_close_contours(merged_rectangles,10)
+    merged_rectangles = merge_close_contours(merged_rectangles,100)
+    merged_rectangles = remove_contours_inside(merged_rectangles)
+
+    vis_cnts(copy3, merged_rectangles)
+
+    merged_rectangles = merge_close_contours(merged_rectangles,100)
     merged_rectangles = remove_contours_inside(merged_rectangles)
 
 
     ROI = []
 
-    get_boxes(merged_rectangles, copy3, img, ROI)
+    get_boxes(merged_rectangles, copy4, img, ROI)
 
     return ROI
 
@@ -553,7 +580,7 @@ def process_text_from_tesseract(text_data):
     print(text_data)
 
 
-def run(info_dir,tes_mode:str):
+def run(info_dir,tes_mode:str,to_save):
 
     txts_path = []
     images_path = []
@@ -572,7 +599,10 @@ def run(info_dir,tes_mode:str):
     for txt_path,image_path in img_txt:
         points = read_coords(txt_path)
 
+
         ROI = merge_existing_boxes(image_path,points)
+
+        file  = 'C:/capstone/text_output.txt'
 
         for roi in ROI:
 
@@ -582,6 +612,11 @@ def run(info_dir,tes_mode:str):
                 text = pytesseract.image_to_string(roi, config='--psm 4')
             else:
                 text = pytesseract.image_to_string(roi, config='--psm 3')
+
+            if to_save:
+                with open(file, 'a') as f:
+                    f.write(text + '\n')  # Add a newline after each text
+                    #f.write('-------'*10 +'\n')
 
             if text:
                 process_text_from_tesseract(text)
