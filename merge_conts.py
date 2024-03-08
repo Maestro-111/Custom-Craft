@@ -580,7 +580,7 @@ def process_text_from_tesseract(text_data):
     print(text_data)
 
 
-def run(info_dir,tes_mode:str,to_save):
+def run(info_dir,tes_mode:str,to_save,text_out_path:str):
 
     txts_path = []
     images_path = []
@@ -602,7 +602,7 @@ def run(info_dir,tes_mode:str,to_save):
 
         ROI = merge_existing_boxes(image_path,points)
 
-        file  = 'C:/capstone/text_output.txt'
+        file = text_out_path
 
         for roi in ROI:
 
@@ -616,7 +616,6 @@ def run(info_dir,tes_mode:str,to_save):
             if to_save:
                 with open(file, 'a') as f:
                     f.write(text + '\n')  # Add a newline after each text
-                    #f.write('-------'*10 +'\n')
 
             if text:
                 process_text_from_tesseract(text)
