@@ -76,7 +76,7 @@ parser.add_argument('--refiner_model', default='weights/craft_refiner_CTW1500.pt
 parser.add_argument('--custom_prep', default=True, help='do custom prep')
 parser.add_argument('--tesseract_mode', default=4, type=int, help='mode for tessedact')
 parser.add_argument('--res_txt_path', default='C:/capstone/text_output.txt', type=str, help='path for output in txt')
-parser.add_argument('--save_contours', default=True)
+parser.add_argument('--save_text', default=True)
 
 args = parser.parse_args()
 
@@ -210,7 +210,7 @@ if __name__ == '__main__':
             shutil.copy(os.path.join(img_dir, file), copy_dir)
 
 
-        run('tets_boxes_from_craft',tes_mode=args.tesseract_mode,to_save=args.save_contours, text_out_path=args.res_txt_path)
+        run('tets_boxes_from_craft',tes_mode=args.tesseract_mode,to_save=args.save_text, text_out_path=args.res_txt_path)
 
 
 

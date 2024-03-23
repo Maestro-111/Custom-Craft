@@ -580,7 +580,7 @@ def process_text_from_tesseract(text_data):
     print(text_data)
 
 
-def run(info_dir,tes_mode:str,to_save,text_out_path:str):
+def run(info_dir,tes_mode:int,to_save:bool,text_out_path:str):
 
     txts_path = []
     images_path = []
@@ -602,19 +602,12 @@ def run(info_dir,tes_mode:str,to_save,text_out_path:str):
 
         ROI = merge_existing_boxes(image_path,points)
 
-        file = text_out_path
-
         for roi in ROI:
 
-            if tes_mode == '6':
-                text = pytesseract.image_to_string(roi, config='--psm 6')
-            elif tes_mode == '4':
-                text = pytesseract.image_to_string(roi, config='--psm 4')
-            else:
-                text = pytesseract.image_to_string(roi, config='--psm 3')
+            text = pytesseract.image_to_string(roi, config=f'--psm {tes_mode}')
 
             if to_save:
-                with open(file, 'a') as f:
+                with open(text_out_path, 'a') as f:
                     f.write(text + '\n')  # Add a newline after each text
 
             if text:
