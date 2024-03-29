@@ -14,6 +14,7 @@ from sklearn.cluster import BisectingKMeans
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import re
+import easyocr
 
 def get_mean_dist(clustering_algo, data):
     cluster_coords = defaultdict(list)
@@ -572,7 +573,7 @@ def mean_distance_between_rectangles(centroids_array):
     return mean_distance
 
 
-def process_text_from_tesseract(text_data):
+def process_text_from_OCR(text_data):
 
     text_data = re.split(r'\n', text_data)
     text_data = ' '.join(text_data)
@@ -601,17 +602,27 @@ def run(info_dir,tes_mode:int,to_save:bool,text_out_path:str):
 
 
         ROI = merge_existing_boxes(image_path,points)
+        reader = easyocr.Reader(['en'])
+
 
         for roi in ROI:
 
-            text = pytesseract.image_to_string(roi, config=f'--psm {tes_mode}')
+            #text = pytesseract.image_to_string(roi, config=f'--psm {tes_mode}')
+
+            result = reader.readtext(roi)
+
+            sentence = []
+            for (bbox, text_out, prob) in result: # check its text
+                if prob > 0.15:
+                    sentence.append(text_out)
+            sentence = ' '.join(sentence)
 
             if to_save:
                 with open(text_out_path, 'a') as f:
-                    f.write(text + '\n')  # Add a newline after each text
+                    f.write(sentence + '\n')  # Add a newline after each text
 
-            if text:
-                process_text_from_tesseract(text)
+            if sentence:
+                process_text_from_OCR(sentence)
 
 
 
