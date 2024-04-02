@@ -74,7 +74,6 @@ parser.add_argument('--test_folder', default='/data/', type=str, help='folder pa
 parser.add_argument('--refine', default=False, action='store_true', help='enable link refiner')
 parser.add_argument('--refiner_model', default='weights/craft_refiner_CTW1500.pth', type=str, help='pretrained refiner model')
 parser.add_argument('--custom_prep', default=True, help='do custom prep')
-parser.add_argument('--tesseract_mode', default=4, type=int, help='mode for tessedact')
 parser.add_argument('--res_txt_path', default='C:/capstone/text_output.txt', type=str, help='path for output in txt')
 parser.add_argument('--save_text', default=True)
 
@@ -210,7 +209,7 @@ if __name__ == '__main__':
             shutil.copy(os.path.join(img_dir, file), copy_dir)
 
 
-        run('tets_boxes_from_craft',tes_mode=args.tesseract_mode,to_save=args.save_text, text_out_path=args.res_txt_path)
+        run('tets_boxes_from_craft',to_save=args.save_text, text_out_path=args.res_txt_path)
 
 
 

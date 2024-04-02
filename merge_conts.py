@@ -581,7 +581,7 @@ def process_text_from_OCR(text_data):
     print(text_data)
 
 
-def run(info_dir,tes_mode:int,to_save:bool,text_out_path:str):
+def run(info_dir,to_save:bool,text_out_path:str):
 
     txts_path = []
     images_path = []
@@ -606,8 +606,6 @@ def run(info_dir,tes_mode:int,to_save:bool,text_out_path:str):
 
 
         for roi in ROI:
-
-            #text = pytesseract.image_to_string(roi, config=f'--psm {tes_mode}')
 
             result = reader.readtext(roi)
 
